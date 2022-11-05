@@ -1,16 +1,31 @@
 const express = require('express')
 const app = express()
 const path = require('path')
+const cors = require('cors')
 
 app.use(express.json())
+app.use(cors())
+
+// include and initialize the rollbar library with your access token
+var Rollbar = require('rollbar')
+var rollbar = new Rollbar({
+  accessToken: '1960bc4c8fff4d4da25a30af767c0622',
+  captureUncaught: true,
+  captureUnhandledRejections: true,
+})
+
+// record a generic message and send it to Rollbar
+rollbar.log('Hello world!')
 
 const students = ['Jimmy', 'Timothy', 'Jimothy']
 
 app.get('/', (req, res) => {
+    rollbar.info('HTML served successfully');
     res.sendFile(path.join(__dirname, '/index.html'))
 })
 
 app.get('/api/students', (req, res) => {
+    rollbar.info('someone for the list of students to load');
     res.status(200).send(students)
 })
 
@@ -23,11 +38,14 @@ app.post('/api/students', (req, res) => {
 
    try {
        if (index === -1 && name !== '') {
+            rollbar.log("Student added successfully", {author: "Rachel", type: "manual entry"});
            students.push(name)
            res.status(200).send(students)
        } else if (name === ''){
+            rollbar.error("No name provided");
            res.status(400).send('You must enter a name.')
        } else {
+            rollbar.error("Student already exsists.")
            res.status(400).send('That student already exists.')
        }
    } catch (err) {
@@ -41,6 +59,8 @@ app.delete('/api/students/:index', (req, res) => {
     students.splice(targetIndex, 1)
     res.status(200).send(students)
 })
+
+app.use(rollbar.errorHandler());
 
 const port = process.env.PORT || 5050
 
